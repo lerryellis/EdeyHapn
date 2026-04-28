@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname)); // serves index.html + assets
+app.use(express.static(__dirname));
 
 // ── Health ────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -17,7 +17,6 @@ app.get('/api/health', (req, res) => {
 });
 
 // ── GET /api/posts ────────────────────────────────────────────────
-// Query params: ?cat=traffic  (optional filter)
 app.get('/api/posts', async (req, res) => {
   try {
     const { cat } = req.query;
@@ -113,8 +112,14 @@ app.get('*', (req, res) => {
 });
 
 // ── Start ─────────────────────────────────────────────────────────
-async function start() {
-  await initDB();
-  app.listen(PORT, () => console.log(`🚀 EdeyHapn running on http://localhost:${PORT}`));
-}
-start().catch(err => { console.error('Startup failed:', err); process.exit(1); });
+// HTTP server starts first so Railway health checks pass immediately.
+// DB init runs after — if it fails the app stays up and API routes
+// return 500 until the connection is available.
+app.listen(PORT, () => {
+  console.log(`🚀 EdeyHapn running on http://localhost:${PORT}`);
+  console.log(`   DATABASE_URL: ${process.env.DATABASE_URL ? 'set ✓' : 'NOT SET ✗ — check Railway variables'}`);
+
+  initDB().catch(err => {
+    console.error('⚠️  DB init failed (API routes will return 500 until fixed):', err.message);
+  });
+});
