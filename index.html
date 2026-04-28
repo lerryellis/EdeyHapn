@@ -73,11 +73,11 @@
     .map-filter-bar > * { pointer-events: all; }
 
     /* ── Map markers ── */
-    .mkr-wrap { position:relative; width:44px; height:44px; }
+    .mkr-wrap { position:relative; width:30px; height:30px; }
     .mkr-ring { position:absolute; inset:-3px; border-radius:50%; opacity:0; }
     .mkr-ring.pulse { animation: mping 1.8s ease-out infinite; }
     @keyframes mping { 0%{transform:scale(1);opacity:0.7} 100%{transform:scale(1.9);opacity:0} }
-    .mkr-body { position:absolute; inset:0; border-radius:50%; border:3px solid white; box-shadow:0 2px 10px rgba(0,0,0,0.28); display:flex; align-items:center; justify-content:center; font-size:18px; line-height:1; cursor:pointer; }
+    .mkr-body { position:absolute; inset:0; border-radius:50%; border:2px solid white; box-shadow:0 2px 8px rgba(0,0,0,0.22); display:flex; align-items:center; justify-content:center; font-size:13px; line-height:1; cursor:pointer; }
 
     /* ── Locate button ── */
     .locate-btn { position:absolute; bottom:14px; right:14px; z-index:400; width:46px; height:46px; background:white; border-radius:50%; box-shadow:0 2px 10px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; border:none; cursor:pointer; }
@@ -581,9 +581,9 @@
           ${isRecent ? `<div class="mkr-ring pulse" style="background:${c.bg};"></div>` : ''}
           <div class="mkr-body" style="background:${c.bg};">${c.emoji}</div>
         </div>`,
-      iconSize: [44, 44],
-      iconAnchor: [22, 22],
-      popupAnchor: [0, -26],
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+      popupAnchor: [0, -18],
     });
   }
 
