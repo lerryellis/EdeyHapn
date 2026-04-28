@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EdeyHapn - What's Happening Near You</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+
+    /* ── Cards ── */
+    .card-wrapper { position:relative; border-radius:1rem; overflow:hidden; margin-bottom:1rem; }
+    .swipe-hint { position:absolute; inset:0; border-radius:1rem; display:flex; align-items:center; opacity:0; pointer-events:none; }
+    .swipe-hint-right { background:#10b981; padding-left:1.5rem; }
+    .swipe-hint-left  { background:#3b82f6; padding-right:1.5rem; justify-content:flex-end; }
+    .card { position:relative; background:white; border-radius:1rem; border:1px solid #f3f4f6; box-shadow:0 1px 3px rgba(0,0,0,0.06); cursor:pointer; touch-action:pan-y; -webkit-user-select:none; user-select:none; will-change:transform; transition:box-shadow 0.2s; }
+    .card.dragging  { transition:none; }
+    .card.snap-back { transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+    .card.fly-right { transition:transform 0.35s ease, opacity 0.3s ease; }
+    .card:hover     { box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+
+    /* ── Sheets ── */
+    .sheet { position:fixed; bottom:0; left:50%; width:100%; max-width:448px; background:white; border-radius:1.5rem 1.5rem 0 0; box-shadow:0 -8px 40px rgba(0,0,0,0.18); z-index:500; transform:translateX(-50%) translateY(105%); transition:transform 0.38s cubic-bezier(0.32,0.72,0,1); }
+    .sheet.open { transform:translateX(-50%) translateY(0); }
+
+    /* ── Overlay ── */
+    #overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:450; opacity:0; pointer-events:none; transition:opacity 0.3s; }
+    #overlay.visible { opacity:1; pointer-events:all; }
+
+    /* ── Backdrop-filter cross-browser ── */
+    header, .map-filter-bar { -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+
+    /* ── About sheet scrollable ── */
+    #aboutSheet { max-height: 92vh; overflow-y: auto; }
+
+    /* ── Toast ── */
+    #toast { position:fixed; top:80px; left:50%; transform:translateX(-50%) translateY(-8px); background:#1a1a1a; color:white; padding:10px 20px; border-radius:50px; font-size:13px; font-weight:600; opacity:0; z-index:999; white-space:nowrap; pointer-events:none; transition:opacity 0.25s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    /* ── Map view ── */
+    #mapView {
+      position: fixed;
+      top: 65px;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 448px;
+      z-index: 30;
+      display: none;
+      background: #e8e0d5;
+    }
+    #mapView.active { display: block; }
+    #map { height: 100%; width: 100%; }
+
+    /* Leaflet overrides */
+    .leaflet-control-attribution { display: none !important; }
+    .leaflet-control-zoom { border: none !important; box-shadow: 0 2px 10px rgba(0,0,0,0.15) !important; border-radius: 12px !important; overflow: hidden; }
+    .leaflet-control-zoom a { color: #374151 !important; }
+
+    /* ── Map filter bar ── */
+    .map-filter-bar {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 400;
+      padding: 10px 12px 14px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.97) 65%, rgba(255,255,255,0));
+      pointer-events: none;
+    }
+    .map-filter-bar > * { pointer-events: all; }
+
+    /* ── Map markers ── */
+    .mkr-wrap { position:relative; width:44px; height:44px; }
+    .mkr-ring { position:absolute; inset:-3px; border-radius:50%; opacity:0; }
+    .mkr-ring.pulse { animation: mping 1.8s ease-out infinite; }
+    @keyframes mping { 0%{transform:scale(1);opacity:0.7} 100%{transform:scale(1.9);opacity:0} }
+    .mkr-body { position:absolute; inset:0; border-radius:50%; border:3px solid white; box-shadow:0 2px 10px rgba(0,0,0,0.28); display:flex; align-items:center; justify-content:center; font-size:18px; line-height:1; cursor:pointer; }
+
+    /* ── Locate button ── */
+    .locate-btn { position:absolute; bottom:14px; right:14px; z-index:400; width:46px; height:46px; background:white; border-radius:50%; box-shadow:0 2px 10px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; border:none; cursor:pointer; }
+    .locate-btn:active { transform:scale(0.93); }
+
+    /* ── Post count pill ── */
+    .map-count-pill { position:absolute; top:56px; left:50%; transform:translateX(-50%); z-index:400; background:rgba(26,26,26,0.82); color:white; font-size:11px; font-weight:700; padding:5px 14px; border-radius:50px; white-space:nowrap; backdrop-filter:blur(6px); pointer-events:none; }
+
+    /* ── Animations ── */
+    @keyframes lpulse { 0%{box-shadow:0 0 0 0 rgba(245,166,35,0.45)} 70%{box-shadow:0 0 0 12px rgba(245,166,35,0)} 100%{box-shadow:0 0 0 0 rgba(245,166,35,0)} }
+    .long-pressing { animation:lpulse 0.55s ease; }
+    @keyframes ptspop { 0%{transform:scale(1)} 40%{transform:scale(1.3)} 100%{transform:scale(1)} }
+    .pts-pop { animation:ptspop 0.35s ease; }
+    .helpful-btn.voted { background:#fef3c7; color:#d97706; border-color:#fbbf24; }
+
+    .no-scrollbar::-webkit-scrollbar { display:none; }
+    .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+
+    /* Nav tab active state */
+    .nav-tab.active { color: #f59e0b; }
+    .nav-tab { color: #9ca3af; transition: color 0.2s; }
+  </style>
+</head>
+<body class="bg-slate-50 text-gray-900 max-w-md mx-auto shadow-2xl min-h-screen relative font-sans border-x border-gray-200">
+
+  <div id="toast"></div>
+  <div id="overlay" onclick="closeAll()"></div>
+
+  <!-- ══════════════════════════════════════════
+       SHARE SHEET
+  ══════════════════════════════════════════ -->
+  <div id="shareSheet" class="sheet">
+    <div class="p-5 pb-8">
+      <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5"></div>
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Sharing</p>
+      <h3 class="text-xl font-bold text-gray-900 mb-1" id="shareTitle">Update</h3>
+      <p class="text-sm text-gray-500 mb-6 line-clamp-2" id="sharePreview"></p>
+      <div class="grid grid-cols-4 gap-3 mb-6">
+        <button onclick="shareToWhatsApp()" class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-green-500 rounded-2xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"><svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div><span class="text-xs text-gray-600 font-semibold">WhatsApp</span></button>
+        <button onclick="shareToTwitter()" class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-black rounded-2xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"><svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.75l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></div><span class="text-xs text-gray-600 font-semibold">X / Twitter</span></button>
+        <button onclick="shareToFacebook()" class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"><svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div><span class="text-xs text-gray-600 font-semibold">Facebook</span></button>
+        <button onclick="copyLink()" class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"><svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg></div><span class="text-xs text-gray-600 font-semibold">Copy Link</span></button>
+      </div>
+      <button id="nativeShareBtn" onclick="nativeShare()" class="hidden w-full py-4 bg-amber-500 text-white font-bold rounded-2xl text-sm shadow-lg shadow-amber-500/30 active:scale-95 transition-transform mb-2">Share via Phone...</button>
+      <button onclick="closeAll()" class="w-full py-3.5 bg-gray-100 text-gray-600 font-semibold rounded-2xl text-sm">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       CONTEXT MENU
+  ══════════════════════════════════════════ -->
+  <div id="contextMenu" class="sheet">
+    <div class="p-5 pb-8">
+      <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5"></div>
+      <div class="space-y-1">
+        <button onclick="ctxShare()" class="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"><div class="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg></div><div><p class="font-bold text-gray-900 text-sm">Share this update</p><p class="text-xs text-gray-500 mt-0.5">WhatsApp, X, Facebook, and more</p></div></button>
+        <button onclick="ctxConfirm()" class="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"><div class="w-11 h-11 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><div><p class="font-bold text-gray-900 text-sm">Still happening</p><p class="text-xs text-gray-500 mt-0.5">Confirm this is ongoing where you are</p></div></button>
+        <button onclick="ctxOutdated()" class="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"><div class="w-11 h-11 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><p class="font-bold text-gray-900 text-sm">Mark as outdated</p><p class="text-xs text-gray-500 mt-0.5">This is no longer happening</p></div></button>
+        <button onclick="ctxFlag()" class="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"><div class="w-11 h-11 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg></div><div><p class="font-bold text-gray-900 text-sm">Flag as false</p><p class="text-xs text-gray-500 mt-0.5">This report seems inaccurate</p></div></button>
+      </div>
+      <button onclick="closeAll()" class="w-full py-3.5 bg-gray-100 text-gray-600 font-semibold rounded-2xl text-sm mt-4">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       MAP POST DETAIL SHEET
+  ══════════════════════════════════════════ -->
+  <div id="mapDetailSheet" class="sheet">
+    <div class="p-5 pb-8">
+      <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4"></div>
+      <div class="flex justify-between items-center mb-3">
+        <span id="mdLabel" class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide"></span>
+        <span id="mdTime" class="text-xs text-gray-400 font-medium"></span>
+      </div>
+      <p id="mdText" class="text-gray-900 text-[17px] leading-snug font-medium mb-3"></p>
+      <div class="flex items-center gap-1.5 mb-4">
+        <svg class="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <span id="mdLocation" class="text-xs text-gray-600 font-semibold"></span>
+      </div>
+      <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl mb-5">
+        <span id="mdDist" class="text-sm text-gray-600 font-medium"></span>
+        <span class="text-gray-300">·</span>
+        <span id="mdConfirms" class="text-xs text-gray-500"></span>
+        <span class="text-gray-300">·</span>
+        <span id="mdHelpful" class="text-xs text-gray-500"></span>
+      </div>
+      <div class="flex gap-3 mb-2">
+        <button onclick="ctxConfirm()" class="flex-1 py-3.5 bg-emerald-50 text-emerald-700 font-bold rounded-2xl text-sm active:scale-95 transition-transform">✅ Confirm</button>
+        <button onclick="ctxShare()" class="flex-1 py-3.5 bg-amber-500 text-white font-bold rounded-2xl text-sm shadow-md shadow-amber-500/30 active:scale-95 transition-transform">Share</button>
+      </div>
+      <button onclick="closeAll()" class="w-full py-3.5 bg-gray-100 text-gray-600 font-semibold rounded-2xl text-sm">Close</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       REPORT SHEET
+  ══════════════════════════════════════════ -->
+  <div id="reportSheet" class="sheet">
+    <div class="p-5 pb-8">
+      <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5"></div>
+      <h3 class="text-xl font-bold text-gray-900 mb-5">What's happening?</h3>
+      <div class="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1">
+        <button class="cat-btn active flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-red-100 text-red-700 border-red-300" data-cat="traffic">🚨 Traffic</button>
+        <button class="cat-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-gray-100 text-gray-500 border-transparent" data-cat="event">🎉 Event</button>
+        <button class="cat-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-gray-100 text-gray-500 border-transparent" data-cat="power">⚡ Power</button>
+        <button class="cat-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-gray-100 text-gray-500 border-transparent" data-cat="safety">🔒 Safety</button>
+        <button class="cat-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-gray-100 text-gray-500 border-transparent" data-cat="weather">🌧️ Weather</button>
+      </div>
+      <textarea id="reportText" placeholder="Describe what's happening near you..." rows="3" class="w-full p-4 rounded-2xl border-2 border-gray-100 text-sm text-gray-900 placeholder-gray-400 resize-none focus:outline-none focus:border-amber-400 transition-colors mb-4"></textarea>
+      <div id="gpsBadge" class="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl mb-5">
+        <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <span id="gpsLabel" class="text-xs text-emerald-700 font-semibold">Getting your location...</span>
+      </div>
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Also post to</p>
+      <div class="flex flex-wrap gap-2 mb-6">
+        <button id="togWA" onclick="toggleSocial(this,'whatsapp')" class="social-tog flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-xs font-bold text-gray-500 transition-all active:scale-95"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>WhatsApp</button>
+        <button id="togTW" onclick="toggleSocial(this,'twitter')" class="social-tog flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-xs font-bold text-gray-500 transition-all active:scale-95"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.75l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>X / Twitter</button>
+        <button id="togFB" onclick="toggleSocial(this,'facebook')" class="social-tog flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-xs font-bold text-gray-500 transition-all active:scale-95"><svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>Facebook</button>
+      </div>
+      <button onclick="submitReport()" class="w-full py-4 bg-amber-500 text-white font-bold rounded-2xl text-base shadow-lg shadow-amber-500/30 active:scale-95 transition-transform">Post Report · +10 pts</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       REWARDS SHEET
+  ══════════════════════════════════════════ -->
+  <div id="rewardsSheet" class="sheet">
+    <div class="p-5 pb-8">
+      <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5"></div>
+      <div class="text-center mb-6">
+        <div class="text-5xl mb-2">⭐</div>
+        <h3 class="text-2xl font-bold text-gray-900" id="rewardsPts">35 pts</h3>
+        <p class="text-sm text-gray-500 mt-1" id="rewardsRank">Local Reporter</p>
+      </div>
+      <div class="mb-6">
+        <div class="flex justify-between text-xs text-gray-500 font-medium mb-2"><span id="rewardsFrom"></span><span id="rewardsTo"></span></div>
+        <div class="w-full bg-gray-100 rounded-full h-2.5"><div id="rewardsBar" class="bg-amber-400 h-2.5 rounded-full transition-all duration-700" style="width:0%"></div></div>
+        <p class="text-xs text-gray-400 text-center mt-2" id="rewardsNext"></p>
+      </div>
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">How to earn points</p>
+      <div class="space-y-2">
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl"><span class="text-sm text-gray-700 font-medium">Post a report</span><span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">+10 pts</span></div>
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl"><span class="text-sm text-gray-700 font-medium">Someone confirms your post</span><span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">+5 pts</span></div>
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl"><span class="text-sm text-gray-700 font-medium">Someone marks your post helpful</span><span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">+8 pts</span></div>
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl"><span class="text-sm text-gray-700 font-medium">Mark a post as helpful</span><span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">+2 pts</span></div>
+      </div>
+      <button onclick="closeAll()" class="w-full py-3.5 bg-gray-100 text-gray-600 font-semibold rounded-2xl text-sm mt-5">Close</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       HEADER
+  ══════════════════════════════════════════ -->
+  <header class="sticky top-0 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3.5 flex justify-between items-center z-40">
+    <button type="button" onclick="openSheet('aboutSheet')" class="flex items-center gap-2 active:opacity-70 transition-opacity">
+      <h1 class="text-xl font-bold text-gray-900 tracking-tight">EdeyHapn</h1>
+      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </button>
+    <div class="flex items-center gap-2">
+      <button onclick="showRewards()" id="pointsBadge" class="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full active:scale-95 transition-transform">
+        <span class="text-base leading-none">⭐</span>
+        <span id="pointsDisplay" class="text-xs font-bold text-amber-700">35 pts</span>
+      </button>
+      <div class="flex items-center text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
+        <svg class="w-4 h-4 mr-1.5 text-amber-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        Accra Central
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════
+       ABOUT SHEET
+  ══════════════════════════════════════════ -->
+  <div id="aboutSheet" class="sheet">
+
+    <!-- Sticky handle + amber hero -->
+    <div class="sticky top-0 bg-white z-10 pt-4 px-5 pb-0">
+      <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4"></div>
+      <div class="bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl px-6 py-7 text-white text-center mb-5 shadow-lg shadow-amber-400/30">
+        <div class="text-4xl font-black tracking-tight mb-1">EdeyHapn</div>
+        <div class="text-sm font-semibold opacity-90 mb-3">E dey happen · It is happening</div>
+        <div class="inline-flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1 text-xs font-bold">
+          <span class="w-2 h-2 bg-white rounded-full animate-pulse inline-block"></span>
+          Live · Accra
+        </div>
+      </div>
+    </div>
+
+    <div class="px-5 pb-10">
+
+      <!-- Tagline -->
+      <p class="text-gray-500 text-sm leading-relaxed text-center mb-7">
+        Real-time updates from real people, right where it's happening. No algorithms. No filters. Just the city, live.
+      </p>
+
+      <!-- How it works -->
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">How it works</p>
+      <div class="space-y-3 mb-7">
+        <div class="flex gap-4 items-start">
+          <div class="w-11 h-11 bg-amber-50 rounded-2xl flex items-center justify-center flex-shrink-0 text-xl">📍</div>
+          <div><p class="font-bold text-gray-900 text-sm">Spot something</p><p class="text-xs text-gray-500 mt-1 leading-relaxed">Traffic, power cut, flooding, event starting — anything people nearby should know about right now.</p></div>
+        </div>
+        <div class="flex gap-4 items-start">
+          <div class="w-11 h-11 bg-amber-50 rounded-2xl flex items-center justify-center flex-shrink-0 text-xl">📡</div>
+          <div><p class="font-bold text-gray-900 text-sm">Post it instantly</p><p class="text-xs text-gray-500 mt-1 leading-relaxed">Your report is GPS-stamped at your exact location and shared with everyone in the area within seconds.</p></div>
+        </div>
+        <div class="flex gap-4 items-start">
+          <div class="w-11 h-11 bg-amber-50 rounded-2xl flex items-center justify-center flex-shrink-0 text-xl">✅</div>
+          <div><p class="font-bold text-gray-900 text-sm">Community confirms</p><p class="text-xs text-gray-500 mt-1 leading-relaxed">Others at the scene confirm or update reports, making the information more trustworthy over time.</p></div>
+        </div>
+      </div>
+
+      <!-- What you can report -->
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">What you can report</p>
+      <div class="grid grid-cols-3 gap-2 mb-7">
+        <div class="bg-red-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">🚨</div><div class="text-xs font-bold text-red-700">Traffic</div></div>
+        <div class="bg-emerald-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">🎉</div><div class="text-xs font-bold text-emerald-700">Events</div></div>
+        <div class="bg-yellow-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">⚡</div><div class="text-xs font-bold text-yellow-700">Power</div></div>
+        <div class="bg-purple-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">🔒</div><div class="text-xs font-bold text-purple-700">Safety</div></div>
+        <div class="bg-sky-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">🌧️</div><div class="text-xs font-bold text-sky-700">Weather</div></div>
+        <div class="bg-blue-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">ℹ️</div><div class="text-xs font-bold text-blue-700">General</div></div>
+      </div>
+
+      <!-- GPS Verification -->
+      <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 mb-4">
+        <div class="flex items-center gap-2 mb-2">
+          <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          <span class="text-sm font-bold text-emerald-800">GPS Verification</span>
+        </div>
+        <p class="text-xs text-emerald-700 leading-relaxed">Every report is stamped with the poster's GPS coordinates at the moment of posting. The exact place name is resolved from OpenStreetMap in real time — so you always know exactly where it's coming from.</p>
+      </div>
+
+      <!-- Rewards -->
+      <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-lg">⭐</span>
+          <span class="text-sm font-bold text-amber-800">Earn while you help</span>
+        </div>
+        <p class="text-xs text-amber-700 leading-relaxed">Every post, confirmation, and helpful vote earns you points. Rise through six ranks — from <strong>Local Reporter</strong> all the way to <strong>Legend of Accra</strong>.</p>
+      </div>
+
+      <!-- Privacy -->
+      <div class="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-7">
+        <div class="flex items-center gap-2 mb-2">
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          <span class="text-sm font-bold text-gray-700">Privacy first</span>
+        </div>
+        <p class="text-xs text-gray-500 leading-relaxed">Reports are location-stamped but anonymous by default. Your personal identity is never attached to a post. Only the location and time of reporting is shared.</p>
+      </div>
+
+      <!-- Built with -->
+      <div class="text-center mb-6">
+        <p class="text-xs text-gray-400 font-medium">Map data © <a href="https://openstreetmap.org" target="_blank" rel="noopener" class="text-amber-500 font-semibold">OpenStreetMap</a> contributors</p>
+        <p class="text-xs text-gray-400 mt-1">Tiles © <a href="https://carto.com" target="_blank" rel="noopener" class="text-amber-500 font-semibold">CARTO</a></p>
+      </div>
+
+      <!-- Version -->
+      <div class="text-center border-t border-gray-100 pt-5">
+        <p class="text-sm font-bold text-gray-900">EdeyHapn</p>
+        <p class="text-xs text-gray-400 mt-0.5">Version 1.0 · Made with ❤️ for Accra</p>
+      </div>
+
+      <button type="button" onclick="closeAll()" class="w-full py-3.5 bg-gray-100 text-gray-600 font-semibold rounded-2xl text-sm mt-6 active:bg-gray-200 transition-colors">Close</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       MAP VIEW
+  ══════════════════════════════════════════ -->
+  <div id="mapView">
+    <!-- Filter bar -->
+    <div class="map-filter-bar">
+      <div class="flex gap-2 overflow-x-auto no-scrollbar">
+        <button class="map-filter-btn active flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-gray-900 text-white shadow-sm" data-filter="all">All</button>
+        <button class="map-filter-btn flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 shadow-sm border border-gray-100" data-filter="traffic">🚨 Traffic</button>
+        <button class="map-filter-btn flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 shadow-sm border border-gray-100" data-filter="event">🎉 Event</button>
+        <button class="map-filter-btn flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 shadow-sm border border-gray-100" data-filter="info">ℹ️ Info</button>
+        <button class="map-filter-btn flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 shadow-sm border border-gray-100" data-filter="weather">🌧️ Weather</button>
+        <button class="map-filter-btn flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 shadow-sm border border-gray-100" data-filter="power">⚡ Power</button>
+      </div>
+    </div>
+
+    <!-- Post count pill -->
+    <div class="map-count-pill" id="mapCountPill">4 updates near you</div>
+
+    <!-- Leaflet map -->
+    <div id="map"></div>
+
+    <!-- Locate me -->
+    <button class="locate-btn" onclick="locateMe()" title="Find my location">
+      <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       FEED (swipe hint bar + cards)
+  ══════════════════════════════════════════ -->
+  <div id="feedView">
+    <div class="px-4 pt-3 pb-0 flex justify-between text-xs text-gray-400 font-medium">
+      <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Swipe left to share</span>
+      <span class="flex items-center gap-1">Hold for options · Swipe right to confirm<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></span>
+    </div>
+    <main id="feed" class="p-4 pt-3 pb-28"></main>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       BOTTOM NAV
+  ══════════════════════════════════════════ -->
+  <nav class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-around items-center pt-2 pb-safe px-4 shadow-[0_-10px_20px_-4px_rgba(0,0,0,0.07)] z-50">
+    <button id="navFeed" onclick="switchView('feed')" class="nav-tab active flex flex-col items-center p-2">
+      <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      <span class="text-[10px] font-bold uppercase tracking-wide">Feed</span>
+    </button>
+
+    <button onclick="openReportSheet()" class="flex flex-col items-center p-2 -mt-8 cursor-pointer group">
+      <div class="bg-amber-500 rounded-full p-4 shadow-lg shadow-amber-500/40 text-white border-4 border-white group-hover:-translate-y-1 group-active:scale-95 transition-transform">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      </div>
+      <span class="text-[10px] font-bold uppercase tracking-wide mt-1 text-gray-700">Report</span>
+    </button>
+
+    <button id="navMap" onclick="switchView('map')" class="nav-tab flex flex-col items-center p-2">
+      <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+      <span class="text-[10px] font-semibold uppercase tracking-wide">Map</span>
+    </button>
+  </nav>
+
+  <script>
+  // ══════════════════════════════════════════
+  // CONFIG
+  // ══════════════════════════════════════════
+  // Empty string = same origin (works on Railway and local `node server.js`)
+  const API_BASE = '';
+  const APP_URL  = 'https://edeyhapn.up.railway.app';
+
+  // ══════════════════════════════════════════
+  // STATE
+  // ══════════════════════════════════════════
+  let posts       = [];
+  let activePost  = null;
+  let socialEnabled = { whatsapp:false, twitter:false, facebook:false };
+  let userPoints  = parseInt(localStorage.getItem('ehPoints') || '0');
+  let reportLocation = 'Your location';
+  let reportLat = 5.555, reportLng = -0.200;
+  let userLat   = 5.555, userLng   = -0.200; // updated by geolocation
+
+  // Persist which posts this device has voted helpful (survives refresh)
+  const votedPosts = new Set(JSON.parse(localStorage.getItem('ehVoted') || '[]'));
+  function saveVoted() { localStorage.setItem('ehVoted', JSON.stringify([...votedPosts])); }
+  function savePoints(){ localStorage.setItem('ehPoints', String(userPoints)); }
+
+  // ══════════════════════════════════════════
+  // TIME & DISTANCE HELPERS
+  // ══════════════════════════════════════════
+  function timeAgo(dateStr) {
+    const s = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+    if (s < 30)   return 'Just now';
+    if (s < 3600) return `${Math.floor(s/60)}m ago`;
+    if (s < 86400)return `${Math.floor(s/3600)}h ago`;
+    return `${Math.floor(s/86400)}d ago`;
+  }
+
+  function distKm(lat1,lng1,lat2,lng2){
+    const R=6371, dL=(lat2-lat1)*Math.PI/180, dN=(lng2-lng1)*Math.PI/180;
+    const a=Math.sin(dL/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dN/2)**2;
+    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  }
+  function fmtDist(km){ return km<1?`${Math.round(km*1000)}m`:`${km.toFixed(1)} km`; }
+
+  function hydrate(raw) {
+    return {
+      ...raw,
+      id: Number(raw.id),
+      time: timeAgo(raw.created_at),
+      dist: fmtDist(distKm(userLat,userLng,parseFloat(raw.lat),parseFloat(raw.lng))),
+      helpfulVoted: votedPosts.has(String(raw.id)),
+    };
+  }
+
+  const CAT_COLORS = {
+    traffic:{ bg:'#ef4444', emoji:'🚨' },
+    event:  { bg:'#10b981', emoji:'🎉' },
+    info:   { bg:'#3b82f6', emoji:'ℹ️'  },
+    weather:{ bg:'#0ea5e9', emoji:'🌧️' },
+    power:  { bg:'#f59e0b', emoji:'⚡' },
+    safety: { bg:'#8b5cf6', emoji:'🔒' },
+    default:{ bg:'#f59e0b', emoji:'📍' },
+  };
+
+  const MILESTONES = [
+    { pts:0,   rank:'Local Reporter',  next:50   },
+    { pts:50,  rank:'Community Eyes',  next:150  },
+    { pts:150, rank:'Street Insider',  next:300  },
+    { pts:300, rank:'City Voice',      next:600  },
+    { pts:600, rank:'EdeyHapn Pro',    next:1200 },
+    { pts:1200,rank:'Legend of Accra', next:null },
+  ];
+
+  // ══════════════════════════════════════════
+  // VIEW SWITCHING
+  // ══════════════════════════════════════════
+  let currentView = 'feed';
+  let mapInitialized = false;
+  let mapFilterActive = 'all';
+
+  function switchView(view) {
+    currentView = view;
+    document.getElementById('feedView').style.display = view === 'feed' ? '' : 'none';
+    document.getElementById('mapView').classList.toggle('active', view === 'map');
+    document.getElementById('navFeed').classList.toggle('active', view === 'feed');
+    document.getElementById('navMap').classList.toggle('active', view === 'map');
+
+    if (view === 'map') {
+      if (!mapInitialized) initMap();
+      else { leafletMap.invalidateSize(); renderMapMarkers(); }
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // MAP (Leaflet + OpenStreetMap)
+  // ══════════════════════════════════════════
+  let leafletMap = null;
+  let mapMarkers = [];
+  let userMarker = null;
+
+  function initMap() {
+    mapInitialized = true;
+
+    leafletMap = L.map('map', {
+      center: [5.555, -0.200],
+      zoom: 14,
+      zoomControl: true,
+      attributionControl: false,
+    });
+
+    // Carto Voyager — clean, modern, no API key needed
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      subdomains: 'abcd',
+    }).addTo(leafletMap);
+
+    // Attribution (required by OSM/Carto licence, but we position it subtly)
+    L.control.attribution({ prefix: false, position: 'bottomleft' })
+      .addAttribution('© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>')
+      .addTo(leafletMap);
+
+    renderMapMarkers();
+
+    // Category filter
+    document.querySelectorAll('.map-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.map-filter-btn').forEach(b => {
+          b.className = 'map-filter-btn flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 shadow-sm border border-gray-100';
+        });
+        btn.className = 'map-filter-btn active flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-gray-900 text-white shadow-sm';
+        mapFilterActive = btn.dataset.filter;
+        renderMapMarkers();
+      });
+    });
+  }
+
+  function createMarkerIcon(post) {
+    const c = CAT_COLORS[post.cat] || CAT_COLORS.default;
+    const isRecent = post.time === 'Just now' || (post.time.includes('m ago') && parseInt(post.time) <= 5);
+    return L.divIcon({
+      className: '',
+      html: `
+        <div class="mkr-wrap">
+          ${isRecent ? `<div class="mkr-ring pulse" style="background:${c.bg};"></div>` : ''}
+          <div class="mkr-body" style="background:${c.bg};">${c.emoji}</div>
+        </div>`,
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+      popupAnchor: [0, -26],
+    });
+  }
+
+  function renderMapMarkers() {
+    // Clear existing markers
+    mapMarkers.forEach(m => leafletMap.removeLayer(m));
+    mapMarkers = [];
+
+    const visible = mapFilterActive === 'all'
+      ? posts
+      : posts.filter(p => p.cat === mapFilterActive);
+
+    visible.forEach(post => {
+      const marker = L.marker([post.lat, post.lng], { icon: createMarkerIcon(post) });
+
+      marker.on('click', () => {
+        activePost = post;
+        document.getElementById('mdLabel').textContent = post.label;
+        document.getElementById('mdLabel').className = `px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${post.cls}`;
+        document.getElementById('mdTime').textContent = post.time;
+        document.getElementById('mdText').textContent = post.text;
+        document.getElementById('mdLocation').textContent = post.location;
+        document.getElementById('mdDist').textContent = post.dist + ' away';
+        document.getElementById('mdConfirms').textContent = post.confirms + ' confirmed';
+        document.getElementById('mdHelpful').textContent = post.helpful + ' helpful';
+        openSheet('mapDetailSheet');
+      });
+
+      marker.addTo(leafletMap);
+      mapMarkers.push(marker);
+    });
+
+    // Update count pill
+    const pill = document.getElementById('mapCountPill');
+    if (pill) pill.textContent = `${visible.length} update${visible.length !== 1 ? 's' : ''} near you`;
+  }
+
+  function locateMe() {
+    if (!navigator.geolocation) { showToast('Location not available'); return; }
+    showToast('Finding your location...');
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      leafletMap.setView([lat, lng], 15);
+      if (userMarker) leafletMap.removeLayer(userMarker);
+      userMarker = L.marker([lat, lng], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="width:16px;height:16px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 0 0 4px rgba(59,130,246,0.3);"></div>`,
+          iconSize: [16, 16],
+          iconAnchor: [8, 8],
+        })
+      }).addTo(leafletMap);
+      showToast('📍 Showing your location');
+    }, () => showToast('Location permission denied'));
+  }
+
+  // ══════════════════════════════════════════
+  // API — LOAD POSTS
+  // ══════════════════════════════════════════
+  let loading = true;
+
+  async function loadPosts() {
+    try {
+      const res  = await fetch(`${API_BASE}/api/posts`);
+      if (!res.ok) throw new Error(res.statusText);
+      const data = await res.json();
+      posts   = data.posts.map(hydrate);
+      loading = false;
+      renderFeed();
+      if (mapInitialized) renderMapMarkers();
+    } catch {
+      loading = false;
+      renderFeed(); // shows empty state with error hint
+      showToast('Could not reach server — retrying...');
+      setTimeout(loadPosts, 15000);
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // FEED RENDER
+  // ══════════════════════════════════════════
+  function renderFeed() {
+    if (loading) {
+      document.getElementById('feed').innerHTML = `
+        <div class="flex flex-col items-center justify-center py-20">
+          <div class="w-8 h-8 border-[3px] border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p class="text-sm text-gray-500 font-medium">Loading updates near you...</p>
+        </div>`;
+      return;
+    }
+    if (!posts.length) {
+      document.getElementById('feed').innerHTML = `
+        <div class="flex flex-col items-center justify-center py-20 px-6 text-center">
+          <div class="text-5xl mb-4">📡</div>
+          <p class="text-lg font-bold text-gray-900 mb-2">Nothing yet</p>
+          <p class="text-sm text-gray-500">Be the first to report what's happening near you.</p>
+        </div>`;
+      return;
+    }
+    document.getElementById('feed').innerHTML = posts.map(p => `
+      <div class="card-wrapper" id="wrap-${p.id}">
+        <div class="swipe-hint swipe-hint-right" id="hr-${p.id}">
+          <div class="flex flex-col items-center gap-1"><div class="w-12 h-12 bg-white/25 rounded-full flex items-center justify-center"><svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="text-white text-xs font-bold">Confirm</span></div>
+        </div>
+        <div class="swipe-hint swipe-hint-left" id="hl-${p.id}">
+          <div class="flex flex-col items-center gap-1"><div class="w-12 h-12 bg-white/25 rounded-full flex items-center justify-center"><svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg></div><span class="text-white text-xs font-bold">Share</span></div>
+        </div>
+        <div class="card p-5" id="card-${p.id}" data-id="${p.id}">
+          <div class="flex justify-between items-center mb-3">
+            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${p.cls}">${p.label}</span>
+            <span class="text-xs text-gray-400 font-medium">${p.time}</span>
+          </div>
+          <p class="text-gray-900 text-[17px] leading-snug font-medium mb-3">${p.text}</p>
+          <div class="flex items-center gap-1.5 mb-3">
+            <svg class="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            <span class="text-xs text-gray-500 font-semibold">${p.location}</span>
+          </div>
+          <div class="flex justify-between items-center border-t border-gray-50 pt-3">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-500 font-medium">${p.dist} away</span>
+              <span class="text-gray-200">·</span>
+              <span class="text-xs text-gray-400" id="confirms-${p.id}">${p.confirms} confirmed</span>
+            </div>
+            <button onclick="markHelpful(event,${p.id})" id="helpful-${p.id}"
+              class="helpful-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-gray-100 bg-gray-50 text-xs font-bold text-gray-500 transition-all active:scale-95 ${p.helpfulVoted?'voted':''}">
+              <svg class="w-3.5 h-3.5" fill="${p.helpfulVoted?'currentColor':'none'}" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/></svg>
+              <span id="helpfulCount-${p.id}">${p.helpful}</span> Helpful
+            </button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    posts.forEach(p => attachGestures(document.getElementById(`card-${p.id}`), p));
+  }
+
+  // ══════════════════════════════════════════
+  // HELPFUL
+  // ══════════════════════════════════════════
+  function markHelpful(e, id) {
+    e.stopPropagation();
+    const idx = posts.findIndex(p => p.id === id);
+    if (idx < 0 || posts[idx].helpfulVoted) return;
+    posts[idx].helpful++; posts[idx].helpfulVoted = true;
+    votedPosts.add(String(id)); saveVoted();
+    document.getElementById(`helpfulCount-${id}`).textContent = posts[idx].helpful;
+    const btn = document.getElementById(`helpful-${id}`);
+    btn.classList.add('voted');
+    btn.querySelector('svg').setAttribute('fill','currentColor');
+    addPoints(2, 'Marked a post as helpful');
+    fetch(`${API_BASE}/api/posts/${id}/helpful`,{method:'PATCH'}).catch(()=>{});
+  }
+
+  // ══════════════════════════════════════════
+  // GESTURE ENGINE
+  // ══════════════════════════════════════════
+  function attachGestures(card, post) {
+    let sx=0,sy=0,dx=0,dragging=false,horizontal=null,lpTriggered=false,lpTimer=null;
+    const THRESHOLD=88;
+    const bgR=document.getElementById(`hr-${post.id}`);
+    const bgL=document.getElementById(`hl-${post.id}`);
+    function start(x,y){ sx=x;sy=y;dx=0;dragging=true;horizontal=null;lpTriggered=false;card.classList.add('dragging');lpTimer=setTimeout(()=>{ if(!horizontal){lpTriggered=true;dragging=false;card.classList.remove('dragging');card.style.transform='';card.classList.add('long-pressing');setTimeout(()=>card.classList.remove('long-pressing'),600);activePost=post;openSheet('contextMenu');}},520);}
+    function move(x,y){ if(!dragging||lpTriggered)return;const ddx=x-sx,ddy=y-sy;if(horizontal===null&&(Math.abs(ddx)>6||Math.abs(ddy)>6)){horizontal=Math.abs(ddx)>Math.abs(ddy);if(horizontal)clearTimeout(lpTimer);}if(!horizontal)return;dx=ddx;const c=Math.max(-150,Math.min(150,dx));card.style.transform=`translateX(${c}px) rotate(${c*0.025}deg)`;const p=Math.min(Math.abs(c)/THRESHOLD,1);bgR.style.opacity=c>0?p*0.95:0;bgL.style.opacity=c<0?p*0.95:0;}
+    function end(){ clearTimeout(lpTimer);if(lpTriggered||!dragging)return;dragging=false;card.classList.remove('dragging');bgR.style.opacity=0;bgL.style.opacity=0;if(dx>THRESHOLD)doConfirm(card,post);else if(dx<-THRESHOLD){snapBack(card);activePost=post;setTimeout(()=>openShareFor(post),220);}else snapBack(card);}
+    card.addEventListener('touchstart',e=>start(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
+    card.addEventListener('touchmove',e=>{if(horizontal)e.preventDefault();move(e.touches[0].clientX,e.touches[0].clientY);},{passive:false});
+    card.addEventListener('touchend',end);card.addEventListener('touchcancel',end);
+    card.addEventListener('mousedown',e=>{e.preventDefault();start(e.clientX,e.clientY);});
+    window.addEventListener('mousemove',e=>{if(dragging)move(e.clientX,e.clientY);});
+    window.addEventListener('mouseup',()=>{if(dragging)end();});
+  }
+  function snapBack(card){ card.classList.add('snap-back');card.style.transform='';setTimeout(()=>card.classList.remove('snap-back'),380);}
+  function doConfirm(card,post){
+    card.classList.add('fly-right');
+    card.style.transform='translateX(115%) rotate(6deg)'; card.style.opacity='0';
+    const idx=posts.findIndex(p=>p.id===post.id);
+    if(idx>-1) posts[idx].confirms++;
+    showToast(`✅ Confirmed! ${post.confirms+1} people agree`);
+    setTimeout(()=>renderFeed(),420);
+    fetch(`${API_BASE}/api/posts/${post.id}/confirm`,{method:'PATCH'}).catch(()=>{});
+  }
+
+  // ══════════════════════════════════════════
+  // SHEETS
+  // ══════════════════════════════════════════
+  const ALL_SHEETS = ['shareSheet','contextMenu','reportSheet','rewardsSheet','mapDetailSheet','aboutSheet'];
+  function openSheet(id){ ALL_SHEETS.forEach(s=>document.getElementById(s).classList.toggle('open',s===id));document.getElementById('overlay').classList.add('visible');}
+  function closeAll(){ ALL_SHEETS.forEach(s=>document.getElementById(s).classList.remove('open'));document.getElementById('overlay').classList.remove('visible');}
+  function openShareFor(post){ activePost=post;document.getElementById('shareTitle').textContent=post.label+' · '+post.location;document.getElementById('sharePreview').textContent=post.text;if(navigator.share)document.getElementById('nativeShareBtn').classList.remove('hidden');openSheet('shareSheet');}
+
+  // ══════════════════════════════════════════
+  // REPORT SHEET
+  // ══════════════════════════════════════════
+  function openReportSheet(){
+    openSheet('reportSheet');
+    const label=document.getElementById('gpsLabel');
+    label.textContent='Getting your location...';
+    reportLocation='Your location';
+    if(!navigator.geolocation){label.textContent='Location unavailable';return;}
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      reportLat=pos.coords.latitude; reportLng=pos.coords.longitude;
+      const name=await reverseGeocode(reportLat,reportLng);
+      reportLocation=name; label.textContent=name;
+    },()=>{ label.textContent='Location permission denied'; },{timeout:8000});
+  }
+
+  async function reverseGeocode(lat,lon){
+    try{
+      const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=17&accept-language=en`,{headers:{'User-Agent':'EdeyHapn/1.0 (demo)'}});
+      const data=await res.json();
+      const a=data.address||{};
+      const place=a.amenity||a.road||a.suburb||a.neighbourhood||a.quarter||a.village||a.town||a.city_district||a.city||'Near you';
+      const city=a.city||a.town||a.state||'';
+      return city&&!place.includes(city)?`${place}, ${city}`:place;
+    }catch{return 'Location attached';}
+  }
+
+  // ══════════════════════════════════════════
+  // CONTEXT ACTIONS
+  // ══════════════════════════════════════════
+  function ctxShare(){closeAll();setTimeout(()=>{if(activePost)openShareFor(activePost);},200);}
+  function ctxConfirm(){closeAll();if(!activePost)return;const idx=posts.findIndex(p=>p.id===activePost.id);if(idx>-1){posts[idx].confirms++;setTimeout(renderFeed,280);}showToast(`✅ Confirmed! ${activePost.confirms+1} confirmations`);}
+  function ctxOutdated(){
+    closeAll(); showToast('⏱️ Marked as outdated — thanks!');
+    if(!activePost) return;
+    fetch(`${API_BASE}/api/posts/${activePost.id}/outdated`,{method:'PATCH'}).catch(()=>{});
+    const idx=posts.findIndex(p=>p.id===activePost.id);
+    if(idx>-1) setTimeout(()=>{posts.splice(idx,1);renderFeed();if(mapInitialized)renderMapMarkers();},350);
+  }
+  function ctxFlag(){
+    closeAll(); showToast('🚩 Flagged for review — thanks!');
+    if(activePost) fetch(`${API_BASE}/api/posts/${activePost.id}/flag`,{method:'PATCH'}).catch(()=>{});
+  }
+
+  // ══════════════════════════════════════════
+  // SOCIAL SHARING
+  // ══════════════════════════════════════════
+  function shareText(){return activePost?`${activePost.label} at ${activePost.location}: "${activePost.text}" — EdeyHapn`:`See what's happening near you — EdeyHapn`;}
+  function shareToWhatsApp(){window.open(`https://wa.me/?text=${encodeURIComponent(shareText()+'\n'+APP_URL)}`,'_blank');closeAll();showToast('Opening WhatsApp...');}
+  function shareToTwitter(){window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText())}&url=${encodeURIComponent(APP_URL)}&hashtags=EdeyHapn,AccraLive`,'_blank');closeAll();showToast('Opening X / Twitter...');}
+  function shareToFacebook(){window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(APP_URL)}&quote=${encodeURIComponent(shareText())}`,'_blank');closeAll();showToast('Opening Facebook...');}
+  function copyLink(){navigator.clipboard.writeText(shareText()+' '+APP_URL).then(()=>{closeAll();showToast('📋 Copied to clipboard!');}).catch(()=>{closeAll();showToast('📋 Link ready to share');});}
+  function nativeShare(){if(!navigator.share)return;navigator.share({title:'EdeyHapn',text:shareText(),url:APP_URL}).then(()=>closeAll()).catch(()=>{});}
+
+  // ══════════════════════════════════════════
+  // REPORT SUBMIT
+  // ══════════════════════════════════════════
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.querySelectorAll('.cat-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        document.querySelectorAll('.cat-btn').forEach(b=>{b.className='cat-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-gray-100 text-gray-500 border-transparent';});
+        const colors={traffic:'bg-red-100 text-red-700 border-red-300',event:'bg-emerald-100 text-emerald-700 border-emerald-300',power:'bg-yellow-100 text-yellow-700 border-yellow-300',safety:'bg-purple-100 text-purple-700 border-purple-300',weather:'bg-sky-100 text-sky-700 border-sky-300'};
+        btn.className=`cat-btn active flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 ${colors[btn.dataset.cat]}`;
+      });
+    });
+  });
+  function toggleSocial(btn,platform){
+    socialEnabled[platform]=!socialEnabled[platform];const on=socialEnabled[platform];
+    const styles={whatsapp:'border-green-400 bg-green-50 text-green-700',twitter:'border-gray-900 bg-gray-900 text-white',facebook:'border-blue-400 bg-blue-50 text-blue-700'};
+    btn.className=on?`social-tog flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-xs font-bold transition-all active:scale-95 ${styles[platform]}`:'social-tog flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-xs font-bold text-gray-500 transition-all active:scale-95';
+  }
+  async function submitReport(){
+    const txt=document.getElementById('reportText').value.trim();
+    if(!txt){const ta=document.getElementById('reportText');ta.style.borderColor='#f59e0b';ta.focus();setTimeout(()=>ta.style.borderColor='',1200);return;}
+
+    const activeCat=document.querySelector('.cat-btn.active')?.dataset.cat||'info';
+    const catInfo={traffic:{label:'🚨 Traffic',cls:'bg-red-100 text-red-700'},event:{label:'🎉 Event',cls:'bg-emerald-100 text-emerald-700'},power:{label:'⚡ Power',cls:'bg-yellow-100 text-yellow-700'},safety:{label:'🔒 Safety',cls:'bg-purple-100 text-purple-700'},weather:{label:'🌧️ Weather',cls:'bg-sky-100 text-sky-700'},info:{label:'📍 Update',cls:'bg-amber-100 text-amber-700'}};
+    const ci=catInfo[activeCat]||catInfo.info;
+
+    // Social share intents (fire before awaiting API)
+    if(socialEnabled.whatsapp)window.open(`https://wa.me/?text=${encodeURIComponent(txt+' — EdeyHapn\n'+APP_URL)}`,'_blank');
+    if(socialEnabled.twitter)window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(txt+' — EdeyHapn')}&url=${encodeURIComponent(APP_URL)}&hashtags=EdeyHapn`,'_blank');
+    if(socialEnabled.facebook)window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(APP_URL)}&quote=${encodeURIComponent(txt)}`,'_blank');
+
+    try {
+      const res = await fetch(`${API_BASE}/api/posts`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({cat:activeCat, label:ci.label, cls:ci.cls, text:txt, lat:reportLat, lng:reportLng, location:reportLocation}),
+      });
+      if(!res.ok) throw new Error(res.statusText);
+      const data = await res.json();
+      posts.unshift(hydrate(data.post));
+    } catch {
+      // Optimistic fallback so the UI still feels responsive
+      posts.unshift({id:Date.now(),cat:activeCat,...ci,created_at:new Date().toISOString(),time:'Just now',text:txt,dist:'0.1 km',location:reportLocation,lat:reportLat,lng:reportLng,confirms:1,helpful:0,helpfulVoted:false});
+      showToast('Saved locally — will sync when online');
+    }
+
+    closeAll(); renderFeed();
+    if(mapInitialized) renderMapMarkers();
+    document.getElementById('reportText').value='';
+    socialEnabled={whatsapp:false,twitter:false,facebook:false};
+    ['togWA','togTW','togFB'].forEach(id=>{const b=document.getElementById(id);if(b)b.className='social-tog flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-xs font-bold text-gray-500 transition-all active:scale-95';});
+    addPoints(10,'Posted a report');
+  }
+
+  // ══════════════════════════════════════════
+  // POINTS & REWARDS
+  // ══════════════════════════════════════════
+  function currentMilestone(){let m=MILESTONES[0];for(const ms of MILESTONES){if(userPoints>=ms.pts)m=ms;}return m;}
+  function addPoints(n,reason){
+    const before=currentMilestone();userPoints+=n;const after=currentMilestone();
+    updatePointsBadge(); savePoints();
+    showToast(`+${n} pts · ${reason}`);
+    if(after.pts>before.pts)setTimeout(()=>showToast(`🏆 Rank up! You're now a ${after.rank}`),1600);
+  }
+  function updatePointsBadge(){
+    const el=document.getElementById('pointsDisplay');if(!el)return;
+    el.textContent=`${userPoints} pts`;
+    const badge=document.getElementById('pointsBadge');
+    badge.classList.add('pts-pop');setTimeout(()=>badge.classList.remove('pts-pop'),400);
+  }
+  function showRewards(){
+    const m=currentMilestone();
+    document.getElementById('rewardsPts').textContent=`${userPoints} pts`;
+    document.getElementById('rewardsRank').textContent=m.rank;
+    if(m.next){const prev=m.pts,pct=Math.round(((userPoints-prev)/(m.next-prev))*100);document.getElementById('rewardsFrom').textContent=`${prev} pts`;document.getElementById('rewardsTo').textContent=`${m.next} pts`;document.getElementById('rewardsBar').style.width=pct+'%';document.getElementById('rewardsNext').textContent=`${m.next-userPoints} pts to ${MILESTONES[MILESTONES.indexOf(m)+1].rank}`;}
+    else{document.getElementById('rewardsBar').style.width='100%';document.getElementById('rewardsNext').textContent='Maximum rank reached!';}
+    openSheet('rewardsSheet');
+  }
+
+  // ══════════════════════════════════════════
+  // TOAST
+  // ══════════════════════════════════════════
+  let toastTimer;
+  function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
+
+  // ══════════════════════════════════════════
+  // BOOT
+  // ══════════════════════════════════════════
+  updatePointsBadge();
+
+  // Get user location once on load — improves distance accuracy across the feed
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      userLat=pos.coords.latitude; userLng=pos.coords.longitude;
+      if(posts.length) renderFeed(); // re-render with accurate distances
+    },()=>{},{timeout:6000});
+  }
+
+  // Load from API, then poll every 30 seconds for live updates
+  loadPosts();
+  setInterval(loadPosts, 30000);
+  </script>
+</body>
+</html>
