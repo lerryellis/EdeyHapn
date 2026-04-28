@@ -73,11 +73,22 @@
     .map-filter-bar > * { pointer-events: all; }
 
     /* ── Map markers ── */
-    .mkr-wrap { position:relative; width:30px; height:30px; }
+    .mkr-wrap { position:relative; width:22px; height:22px; }
     .mkr-ring { position:absolute; inset:-3px; border-radius:50%; opacity:0; }
     .mkr-ring.pulse { animation: mping 1.8s ease-out infinite; }
     @keyframes mping { 0%{transform:scale(1);opacity:0.7} 100%{transform:scale(1.9);opacity:0} }
-    .mkr-body { position:absolute; inset:0; border-radius:50%; border:2px solid white; box-shadow:0 2px 8px rgba(0,0,0,0.22); display:flex; align-items:center; justify-content:center; font-size:13px; line-height:1; cursor:pointer; }
+    .mkr-body { position:absolute; inset:0; border-radius:50%; border:1.5px solid white; box-shadow:0 1px 5px rgba(0,0,0,0.28); display:flex; align-items:center; justify-content:center; font-size:10px; line-height:1; cursor:pointer; }
+    /* ── Map legend ── */
+    .map-legend-btn { display:flex; align-items:center; gap:5px; padding:5px 10px 5px 8px; border-radius:999px; border:1.5px solid #e5e7eb; font-size:11px; font-weight:700; background:white; color:#6b7280; box-shadow:0 1px 3px rgba(0,0,0,0.08); cursor:pointer; transition:all 0.15s; flex-shrink:0; -webkit-user-select:none; user-select:none; }
+    .map-legend-btn.active { border-color:var(--cat); background:var(--cat); color:white; box-shadow:0 2px 6px rgba(0,0,0,0.15); }
+    .map-legend-btn .cat-dot { width:8px; height:8px; border-radius:50%; background:var(--cat); flex-shrink:0; transition:background 0.15s; }
+    .map-legend-btn.active .cat-dot { background:rgba(255,255,255,0.65); }
+    .map-legend-btn[data-cat="traffic"] { --cat:#ef4444; }
+    .map-legend-btn[data-cat="event"]   { --cat:#10b981; }
+    .map-legend-btn[data-cat="safety"]  { --cat:#8b5cf6; }
+    .map-legend-btn[data-cat="power"]   { --cat:#f59e0b; }
+    .map-legend-btn[data-cat="weather"] { --cat:#0ea5e9; }
+    .map-legend-btn[data-cat="info"]    { --cat:#3b82f6; }
 
     /* ── Locate button ── */
     .locate-btn { position:absolute; bottom:14px; right:14px; z-index:400; width:46px; height:46px; background:white; border-radius:50%; box-shadow:0 2px 10px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; border:none; cursor:pointer; }
@@ -377,15 +388,15 @@
        MAP VIEW
   ══════════════════════════════════════════ -->
   <div id="mapView">
-    <!-- Filter bar -->
+    <!-- Legend / filter -->
     <div class="map-filter-bar">
-      <div class="flex gap-2 overflow-x-auto no-scrollbar">
-        <button class="map-filter-btn active flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-gray-900 text-white shadow-sm" data-filter="all">All</button>
-        <button class="map-filter-btn flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 shadow-sm border border-gray-100" data-filter="traffic">🚨 Traffic</button>
-        <button class="map-filter-btn flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 shadow-sm border border-gray-100" data-filter="event">🎉 Event</button>
-        <button class="map-filter-btn flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 shadow-sm border border-gray-100" data-filter="info">ℹ️ Info</button>
-        <button class="map-filter-btn flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 shadow-sm border border-gray-100" data-filter="weather">🌧️ Weather</button>
-        <button class="map-filter-btn flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 shadow-sm border border-gray-100" data-filter="power">⚡ Power</button>
+      <div class="flex gap-1.5 overflow-x-auto no-scrollbar">
+        <button class="map-legend-btn active" data-cat="traffic"><span class="cat-dot"></span>Traffic</button>
+        <button class="map-legend-btn active" data-cat="event"><span class="cat-dot"></span>Event</button>
+        <button class="map-legend-btn active" data-cat="safety"><span class="cat-dot"></span>Safety</button>
+        <button class="map-legend-btn active" data-cat="power"><span class="cat-dot"></span>Power</button>
+        <button class="map-legend-btn active" data-cat="weather"><span class="cat-dot"></span>Weather</button>
+        <button class="map-legend-btn active" data-cat="info"><span class="cat-dot"></span>Info</button>
       </div>
     </div>
 
@@ -513,7 +524,7 @@
   // ══════════════════════════════════════════
   let currentView = 'feed';
   let mapInitialized = false;
-  let mapFilterActive = 'all';
+  let mapFilterActive = new Set(['traffic','event','safety','power','weather','info']);
 
   function switchView(view) {
     currentView = view;
@@ -558,14 +569,17 @@
 
     renderMapMarkers();
 
-    // Category filter
-    document.querySelectorAll('.map-filter-btn').forEach(btn => {
+    // Legend multi-select toggle
+    document.querySelectorAll('.map-legend-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.map-filter-btn').forEach(b => {
-          b.className = 'map-filter-btn flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-600 shadow-sm border border-gray-100';
-        });
-        btn.className = 'map-filter-btn active flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-gray-900 text-white shadow-sm';
-        mapFilterActive = btn.dataset.filter;
+        const cat = btn.dataset.cat;
+        if (mapFilterActive.has(cat)) {
+          mapFilterActive.delete(cat);
+          btn.classList.remove('active');
+        } else {
+          mapFilterActive.add(cat);
+          btn.classList.add('active');
+        }
         renderMapMarkers();
       });
     });
@@ -581,9 +595,9 @@
           ${isRecent ? `<div class="mkr-ring pulse" style="background:${c.bg};"></div>` : ''}
           <div class="mkr-body" style="background:${c.bg};">${c.emoji}</div>
         </div>`,
-      iconSize: [30, 30],
-      iconAnchor: [15, 15],
-      popupAnchor: [0, -18],
+      iconSize: [22, 22],
+      iconAnchor: [11, 11],
+      popupAnchor: [0, -14],
     });
   }
 
@@ -592,9 +606,7 @@
     mapMarkers.forEach(m => leafletMap.removeLayer(m));
     mapMarkers = [];
 
-    const visible = mapFilterActive === 'all'
-      ? posts
-      : posts.filter(p => p.cat === mapFilterActive);
+    const visible = posts.filter(p => mapFilterActive.has(p.cat));
 
     visible.forEach(post => {
       const marker = L.marker([post.lat, post.lng], { icon: createMarkerIcon(post) });
