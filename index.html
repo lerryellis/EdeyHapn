@@ -85,17 +85,17 @@
     .map-count-pill { position:absolute; top:56px; left:50%; transform:translateX(-50%); z-index:400; background:rgba(26,26,26,0.82); color:white; font-size:11px; font-weight:700; padding:5px 14px; border-radius:50px; white-space:nowrap; backdrop-filter:blur(6px); pointer-events:none; }
 
     /* ── Animations ── */
-    @keyframes lpulse { 0%{box-shadow:0 0 0 0 rgba(245,166,35,0.45)} 70%{box-shadow:0 0 0 12px rgba(245,166,35,0)} 100%{box-shadow:0 0 0 0 rgba(245,166,35,0)} }
+    @keyframes lpulse { 0%{box-shadow:0 0 0 0 rgba(15,23,42,0.25)} 70%{box-shadow:0 0 0 12px rgba(15,23,42,0)} 100%{box-shadow:0 0 0 0 rgba(15,23,42,0)} }
     .long-pressing { animation:lpulse 0.55s ease; }
     @keyframes ptspop { 0%{transform:scale(1)} 40%{transform:scale(1.3)} 100%{transform:scale(1)} }
     .pts-pop { animation:ptspop 0.35s ease; }
-    .helpful-btn.voted { background:#fef3c7; color:#d97706; border-color:#fbbf24; }
+    .helpful-btn.voted { background:#f1f5f9; color:#475569; border-color:#cbd5e1; }
 
     .no-scrollbar::-webkit-scrollbar { display:none; }
     .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
 
     /* Nav tab active state */
-    .nav-tab.active { color: #1d4ed8; }
+    .nav-tab.active { color: #0f172a; }
     .nav-tab { color: #9ca3af; transition: color 0.2s; }
   </style>
 </head>
@@ -119,7 +119,7 @@
         <button onclick="shareToFacebook()" class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"><svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div><span class="text-xs text-gray-600 font-semibold">Facebook</span></button>
         <button onclick="copyLink()" class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"><svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg></div><span class="text-xs text-gray-600 font-semibold">Copy Link</span></button>
       </div>
-      <button id="nativeShareBtn" onclick="nativeShare()" class="hidden w-full py-4 bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-lg shadow-blue-700/30 active:scale-95 transition-transform mb-2">Share via Phone...</button>
+      <button id="nativeShareBtn" onclick="nativeShare()" class="hidden w-full py-4 bg-slate-900 text-white font-bold rounded-2xl text-sm shadow-lg shadow-slate-900/20 active:scale-95 transition-transform mb-2">Share via Phone...</button>
       <button onclick="closeAll()" class="w-full py-3.5 bg-gray-100 text-gray-600 font-semibold rounded-2xl text-sm">Cancel</button>
     </div>
   </div>
@@ -131,8 +131,8 @@
     <div class="p-5 pb-8">
       <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5"></div>
       <div class="space-y-1">
-        <button onclick="ctxShare()" class="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"><div class="w-11 h-11 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg></div><div><p class="font-bold text-gray-900 text-sm">Share this update</p><p class="text-xs text-gray-500 mt-0.5">WhatsApp, X, Facebook, and more</p></div></button>
-        <button onclick="ctxConfirm()" class="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"><div class="w-11 h-11 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><div><p class="font-bold text-gray-900 text-sm">Still happening</p><p class="text-xs text-gray-500 mt-0.5">Confirm this is ongoing where you are</p></div></button>
+        <button onclick="ctxShare()" class="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"><div class="w-11 h-11 bg-slate-50 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg></div><div><p class="font-bold text-gray-900 text-sm">Share this update</p><p class="text-xs text-gray-500 mt-0.5">WhatsApp, X, Facebook, and more</p></div></button>
+        <button onclick="ctxConfirm()" class="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"><div class="w-11 h-11 bg-slate-50 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><div><p class="font-bold text-gray-900 text-sm">Still happening</p><p class="text-xs text-gray-500 mt-0.5">Confirm this is ongoing where you are</p></div></button>
         <button onclick="ctxOutdated()" class="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"><div class="w-11 h-11 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><p class="font-bold text-gray-900 text-sm">Mark as outdated</p><p class="text-xs text-gray-500 mt-0.5">This is no longer happening</p></div></button>
         <button onclick="ctxFlag()" class="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"><div class="w-11 h-11 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg></div><div><p class="font-bold text-gray-900 text-sm">Flag as false</p><p class="text-xs text-gray-500 mt-0.5">This report seems inaccurate</p></div></button>
       </div>
@@ -163,8 +163,8 @@
         <span id="mdHelpful" class="text-xs text-gray-500"></span>
       </div>
       <div class="flex gap-3 mb-2">
-        <button onclick="ctxConfirm()" class="flex-1 py-3.5 bg-emerald-50 text-emerald-700 font-bold rounded-2xl text-sm active:scale-95 transition-transform">✅ Confirm</button>
-        <button onclick="ctxShare()" class="flex-1 py-3.5 bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-md shadow-blue-700/30 active:scale-95 transition-transform">Share</button>
+        <button onclick="ctxConfirm()" class="flex-1 py-3.5 bg-slate-100 text-slate-700 font-bold rounded-2xl text-sm active:scale-95 transition-transform">✅ Confirm</button>
+        <button onclick="ctxShare()" class="flex-1 py-3.5 bg-slate-900 text-white font-bold rounded-2xl text-sm shadow-md shadow-slate-900/20 active:scale-95 transition-transform">Share</button>
       </div>
       <button onclick="closeAll()" class="w-full py-3.5 bg-gray-100 text-gray-600 font-semibold rounded-2xl text-sm">Close</button>
     </div>
@@ -178,16 +178,16 @@
       <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5"></div>
       <h3 class="text-xl font-bold text-gray-900 mb-5">What's happening?</h3>
       <div class="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1">
-        <button class="cat-btn active flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-red-100 text-red-700 border-red-300" data-cat="traffic">🚨 Traffic</button>
+        <button class="cat-btn active flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-slate-900 text-white border-slate-900" data-cat="traffic">🚨 Traffic</button>
         <button class="cat-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-gray-100 text-gray-500 border-transparent" data-cat="event">🎉 Event</button>
         <button class="cat-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-gray-100 text-gray-500 border-transparent" data-cat="power">⚡ Power</button>
         <button class="cat-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-gray-100 text-gray-500 border-transparent" data-cat="safety">🔒 Safety</button>
         <button class="cat-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-gray-100 text-gray-500 border-transparent" data-cat="weather">🌧️ Weather</button>
       </div>
-      <textarea id="reportText" placeholder="Describe what's happening near you..." rows="3" class="w-full p-4 rounded-2xl border-2 border-gray-100 text-sm text-gray-900 placeholder-gray-400 resize-none focus:outline-none focus:border-blue-500 transition-colors mb-4"></textarea>
-      <div id="gpsBadge" class="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl mb-5">
-        <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        <span id="gpsLabel" class="text-xs text-emerald-700 font-semibold">Getting your location...</span>
+      <textarea id="reportText" placeholder="Describe what's happening near you..." rows="3" class="w-full p-4 rounded-2xl border-2 border-gray-100 text-sm text-gray-900 placeholder-gray-400 resize-none focus:outline-none focus:border-slate-400 transition-colors mb-4"></textarea>
+      <div id="gpsBadge" class="flex items-center gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl mb-5">
+        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <span id="gpsLabel" class="text-xs text-slate-600 font-semibold">Getting your location...</span>
       </div>
       <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Also post to</p>
       <div class="flex flex-wrap gap-2 mb-6">
@@ -195,7 +195,7 @@
         <button id="togTW" onclick="toggleSocial(this,'twitter')" class="social-tog flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-xs font-bold text-gray-500 transition-all active:scale-95"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.75l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>X / Twitter</button>
         <button id="togFB" onclick="toggleSocial(this,'facebook')" class="social-tog flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-xs font-bold text-gray-500 transition-all active:scale-95"><svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>Facebook</button>
       </div>
-      <button onclick="submitReport()" class="w-full py-4 bg-blue-700 text-white font-bold rounded-2xl text-base shadow-lg shadow-blue-700/30 active:scale-95 transition-transform">Post Report · +10 pts</button>
+      <button onclick="submitReport()" class="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl text-base shadow-lg shadow-slate-900/20 active:scale-95 transition-transform">Post Report · +10 pts</button>
     </div>
   </div>
 
@@ -291,21 +291,21 @@
       <!-- What you can report -->
       <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">What you can report</p>
       <div class="grid grid-cols-3 gap-2 mb-7">
-        <div class="bg-red-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">🚨</div><div class="text-xs font-bold text-red-700">Traffic</div></div>
-        <div class="bg-emerald-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">🎉</div><div class="text-xs font-bold text-emerald-700">Events</div></div>
-        <div class="bg-yellow-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">⚡</div><div class="text-xs font-bold text-yellow-700">Power</div></div>
-        <div class="bg-purple-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">🔒</div><div class="text-xs font-bold text-purple-700">Safety</div></div>
-        <div class="bg-sky-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">🌧️</div><div class="text-xs font-bold text-sky-700">Weather</div></div>
-        <div class="bg-blue-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">ℹ️</div><div class="text-xs font-bold text-blue-700">General</div></div>
+        <div class="bg-slate-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">🚨</div><div class="text-xs font-bold text-slate-700">Traffic</div></div>
+        <div class="bg-slate-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">🎉</div><div class="text-xs font-bold text-slate-700">Events</div></div>
+        <div class="bg-slate-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">⚡</div><div class="text-xs font-bold text-slate-700">Power</div></div>
+        <div class="bg-slate-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">🔒</div><div class="text-xs font-bold text-slate-700">Safety</div></div>
+        <div class="bg-slate-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">🌧️</div><div class="text-xs font-bold text-slate-700">Weather</div></div>
+        <div class="bg-slate-50 rounded-2xl p-3 text-center"><div class="text-2xl mb-1">ℹ️</div><div class="text-xs font-bold text-slate-700">General</div></div>
       </div>
 
       <!-- GPS Verification -->
-      <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 mb-4">
+      <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-4">
         <div class="flex items-center gap-2 mb-2">
-          <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-          <span class="text-sm font-bold text-emerald-800">GPS Verification</span>
+          <svg class="w-4 h-4 text-slate-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          <span class="text-sm font-bold text-slate-800">GPS Verification</span>
         </div>
-        <p class="text-xs text-emerald-700 leading-relaxed">Every report is stamped with the poster's GPS coordinates at the moment of posting. The exact place name is resolved from OpenStreetMap in real time — so you always know exactly where it's coming from.</p>
+        <p class="text-xs text-slate-600 leading-relaxed">Every report is stamped with the poster's GPS coordinates at the moment of posting. The exact place name is resolved from OpenStreetMap in real time — so you always know exactly where it's coming from.</p>
       </div>
 
       <!-- Rewards -->
@@ -394,7 +394,7 @@
     </button>
 
     <button onclick="openReportSheet()" class="flex flex-col items-center p-2 -mt-8 cursor-pointer group">
-      <div class="bg-blue-700 rounded-full p-4 shadow-lg shadow-blue-700/40 text-white border-4 border-white group-hover:-translate-y-1 group-active:scale-95 transition-transform">
+      <div class="bg-slate-900 rounded-full p-4 shadow-lg shadow-slate-900/30 text-white border-4 border-white group-hover:-translate-y-1 group-active:scale-95 transition-transform">
         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
       </div>
       <span class="text-[10px] font-bold uppercase tracking-wide mt-1 text-gray-700">Report</span>
@@ -638,7 +638,7 @@
     if (loading) {
       document.getElementById('feed').innerHTML = `
         <div class="flex flex-col items-center justify-center py-20">
-          <div class="w-8 h-8 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div class="w-8 h-8 border-[3px] border-slate-900 border-t-transparent rounded-full animate-spin mb-4"></div>
           <p class="text-sm text-gray-500 font-medium">Loading updates near you...</p>
         </div>`;
       return;
@@ -803,22 +803,21 @@
     document.querySelectorAll('.cat-btn').forEach(btn=>{
       btn.addEventListener('click',()=>{
         document.querySelectorAll('.cat-btn').forEach(b=>{b.className='cat-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-gray-100 text-gray-500 border-transparent';});
-        const colors={traffic:'bg-red-100 text-red-700 border-red-300',event:'bg-emerald-100 text-emerald-700 border-emerald-300',power:'bg-yellow-100 text-yellow-700 border-yellow-300',safety:'bg-purple-100 text-purple-700 border-purple-300',weather:'bg-sky-100 text-sky-700 border-sky-300'};
-        btn.className=`cat-btn active flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 ${colors[btn.dataset.cat]}`;
+        btn.className=`cat-btn active flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-slate-900 text-white border-slate-900`;
       });
     });
   });
   function toggleSocial(btn,platform){
     socialEnabled[platform]=!socialEnabled[platform];const on=socialEnabled[platform];
-    const styles={whatsapp:'border-green-400 bg-green-50 text-green-700',twitter:'border-gray-900 bg-gray-900 text-white',facebook:'border-blue-400 bg-blue-50 text-blue-700'};
+    const styles={whatsapp:'border-slate-900 bg-slate-900 text-white',twitter:'border-slate-900 bg-slate-900 text-white',facebook:'border-slate-900 bg-slate-900 text-white'};
     btn.className=on?`social-tog flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-xs font-bold transition-all active:scale-95 ${styles[platform]}`:'social-tog flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-xs font-bold text-gray-500 transition-all active:scale-95';
   }
   async function submitReport(){
     const txt=document.getElementById('reportText').value.trim();
-    if(!txt){const ta=document.getElementById('reportText');ta.style.borderColor='#f59e0b';ta.focus();setTimeout(()=>ta.style.borderColor='',1200);return;}
+    if(!txt){const ta=document.getElementById('reportText');ta.style.borderColor='#ef4444';ta.focus();setTimeout(()=>ta.style.borderColor='',1200);return;}
 
     const activeCat=document.querySelector('.cat-btn.active')?.dataset.cat||'info';
-    const catInfo={traffic:{label:'🚨 Traffic',cls:'bg-red-100 text-red-700'},event:{label:'🎉 Event',cls:'bg-emerald-100 text-emerald-700'},power:{label:'⚡ Power',cls:'bg-yellow-100 text-yellow-700'},safety:{label:'🔒 Safety',cls:'bg-purple-100 text-purple-700'},weather:{label:'🌧️ Weather',cls:'bg-sky-100 text-sky-700'},info:{label:'📍 Update',cls:'bg-amber-100 text-amber-700'}};
+    const catInfo={traffic:{label:'🚨 Traffic',cls:'bg-red-50 text-red-800'},event:{label:'🎉 Event',cls:'bg-slate-100 text-slate-700'},power:{label:'⚡ Power',cls:'bg-slate-100 text-slate-700'},safety:{label:'🔒 Safety',cls:'bg-slate-100 text-slate-700'},weather:{label:'🌧️ Weather',cls:'bg-slate-100 text-slate-700'},info:{label:'📍 Update',cls:'bg-slate-100 text-slate-700'}};
     const ci=catInfo[activeCat]||catInfo.info;
 
     // Social share intents (fire before awaiting API)
