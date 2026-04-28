@@ -21,7 +21,7 @@ app.get('/api/posts', async (req, res) => {
   try {
     const { cat } = req.query;
     const params  = [];
-    let where     = 'WHERE outdated = false AND flagged = false';
+    let where     = 'WHERE outdated = false';
 
     if (cat && cat !== 'all') {
       params.push(cat);
