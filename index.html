@@ -97,6 +97,88 @@
     /* ── Post count pill ── */
     .map-count-pill { position:absolute; top:56px; left:50%; transform:translateX(-50%); z-index:400; background:rgba(26,26,26,0.82); color:white; font-size:11px; font-weight:700; padding:5px 14px; border-radius:50px; white-space:nowrap; backdrop-filter:blur(6px); pointer-events:none; }
 
+    /* ══════════════════════════════════════════
+       DARK MODE — GALAXY / MILKY WAY
+    ══════════════════════════════════════════ */
+    body.dark {
+      background-color: #04050f !important;
+      background-image:
+        radial-gradient(ellipse 65% 50% at 8% 20%,  rgba(76,29,149,0.38)  0%, transparent 62%),
+        radial-gradient(ellipse 50% 65% at 92% 85%, rgba(29,78,216,0.26)  0%, transparent 62%),
+        radial-gradient(ellipse 38% 28% at 52% 48%, rgba(67,56,202,0.16)  0%, transparent 68%),
+        radial-gradient(circle, rgba(255,255,255,0.88) 1px, transparent 1px),
+        radial-gradient(circle, rgba(180,200,255,0.52) 1px, transparent 1px),
+        radial-gradient(circle, rgba(255,255,255,0.3)  0.5px, transparent 0.5px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 195px 195px, 125px 125px, 78px 78px;
+      background-position: 0 0, 0 0, 0 0, 14px 22px, 68px 92px, 40px 58px;
+      background-attachment: fixed;
+      border-color: #161a44 !important;
+      color: #dde1f5 !important;
+    }
+    body.dark header { background:rgba(4,5,20,0.9) !important; border-color:#12163a !important; }
+    body.dark .sheet { background:rgba(4,5,20,0.97) !important; }
+    body.dark nav    { background:rgba(4,5,20,0.92) !important; border-color:#12163a !important; }
+    body.dark .card  { background:rgba(7,9,26,0.95) !important; border-color:#14183e !important; box-shadow:0 1px 3px rgba(0,0,0,0.55),0 0 0 0.5px rgba(80,100,220,0.09) !important; }
+    body.dark .card:hover { box-shadow:0 4px 20px rgba(80,100,255,0.13) !important; }
+    body.dark .card.card-verified { border-left-color:#22c55e !important; }
+    body.dark .card.card-flagged  { background:rgba(28,8,8,0.95) !important; border-color:#4a1a1a !important; }
+
+    /* Text */
+    body.dark .text-gray-900, body.dark h1, body.dark h2, body.dark h3, body.dark h4 { color:#dde1f5 !important; }
+    body.dark .text-gray-700  { color:#8d98c8 !important; }
+    body.dark .text-gray-600, body.dark .text-slate-600 { color:#6a78b0 !important; }
+    body.dark .text-gray-500, body.dark .text-slate-500 { color:#4c5888 !important; }
+    body.dark .text-gray-400, body.dark .text-slate-400 { color:#373f6a !important; }
+    body.dark .text-slate-700 { color:#8d98c8 !important; }
+    body.dark .text-slate-800 { color:#b8c0e0 !important; }
+
+    /* Surfaces */
+    body.dark .bg-white     { background-color:rgba(7,9,26,0.95)   !important; }
+    body.dark .bg-slate-50,
+    body.dark .bg-gray-50   { background-color:rgba(10,12,34,0.85)  !important; }
+    body.dark .bg-gray-100  { background-color:rgba(14,17,46,0.8)   !important; }
+    body.dark .bg-gray-200  { background-color:rgba(20,24,60,0.7)   !important; }
+    body.dark .bg-slate-100 { background-color:rgba(14,17,46,0.8)   !important; }
+
+    /* Borders */
+    body.dark .border-gray-100, body.dark .border-slate-100 { border-color:#14183e !important; }
+    body.dark .border-gray-200, body.dark .border-slate-200 { border-color:#1a1f50 !important; }
+    body.dark .border-gray-50  { border-color:#0e1232 !important; }
+
+    /* Inputs */
+    body.dark textarea {
+      background-color:rgba(10,12,34,0.85) !important;
+      color:#dde1f5 !important;
+      border-color:#14183e !important;
+    }
+    body.dark textarea::placeholder { color:#2c3460 !important; }
+
+    /* Category filter pills (inactive) */
+    body.dark .cat-btn:not(.active) { background-color:rgba(14,17,46,0.8) !important; color:#4c5888 !important; }
+
+    /* Social toggle (inactive) */
+    body.dark .social-tog:not([style]) { background:rgba(10,12,34,0.85) !important; border-color:#1a1f50 !important; color:#6a78b0 !important; }
+
+    /* Map */
+    body.dark .map-filter-bar { background:linear-gradient(to bottom,rgba(4,5,20,0.96) 65%,transparent) !important; }
+    body.dark .map-legend-btn { background:rgba(7,9,26,0.92) !important; border-color:#1a1f50 !important; color:#4c5888 !important; }
+    body.dark .map-legend-btn.active { color:white !important; }
+    body.dark .map-count-pill { background:rgba(7,9,26,0.88) !important; }
+    body.dark .leaflet-control-zoom { background:rgba(7,9,26,0.92) !important; box-shadow:0 2px 8px rgba(0,0,0,0.5) !important; }
+    body.dark .leaflet-control-zoom a { color:#8d98c8 !important; background:transparent !important; }
+    body.dark .leaflet-control-zoom a:hover { background:rgba(30,36,90,0.5) !important; }
+
+    /* Nav active */
+    body.dark .nav-tab.active { color:#a5b4fc !important; }
+    body.dark .nav-tab        { color:#2e3566 !important; }
+
+    /* Drag handles on sheets */
+    body.dark .bg-gray-200.rounded-full { background-color:#1e2458 !important; }
+
+    /* Hover states */
+    body.dark .hover\:bg-gray-50:hover  { background-color:rgba(14,17,46,0.7) !important; }
+    body.dark .active\:bg-gray-100:active { background-color:rgba(20,24,60,0.7) !important; }
+
     /* ── Animations ── */
     @keyframes lpulse { 0%{box-shadow:0 0 0 0 rgba(15,23,42,0.25)} 70%{box-shadow:0 0 0 12px rgba(15,23,42,0)} 100%{box-shadow:0 0 0 0 rgba(15,23,42,0)} }
     .long-pressing { animation:lpulse 0.55s ease; }
@@ -277,6 +359,7 @@
       <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
     </button>
     <div class="flex items-center gap-2">
+      <button type="button" id="themeBtn" onclick="toggleTheme()" aria-label="Toggle dark mode" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 active:scale-95 transition-transform text-base">🌙</button>
       <button onclick="showRewards()" id="pointsBadge" class="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full active:scale-95 transition-transform">
         <span class="text-base leading-none">⭐</span>
         <span id="pointsDisplay" class="text-xs font-bold text-amber-700">35 pts</span>
@@ -467,6 +550,10 @@
   let reportLat = 5.555, reportLng = -0.200;
   let userLat   = 5.555, userLng   = -0.200; // updated by geolocation
 
+  // ── Theme ────────────────────────────────────────────────────────
+  let darkMode = localStorage.getItem('ehTheme') === 'dark';
+  if (darkMode) document.body.classList.add('dark');
+
   // Persist which posts this device has voted helpful (survives refresh)
   const votedPosts = new Set(JSON.parse(localStorage.getItem('ehVoted') || '[]'));
   function saveVoted() { localStorage.setItem('ehVoted', JSON.stringify([...votedPosts])); }
@@ -543,8 +630,32 @@
   // MAP (Leaflet + OpenStreetMap)
   // ══════════════════════════════════════════
   let leafletMap = null;
+  let mapTileLayer = null;
   let mapMarkers = [];
   let userMarker = null;
+
+  function tileUrl() {
+    return darkMode
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+  }
+  function applyTheme() {
+    document.body.classList.toggle('dark', darkMode);
+    document.getElementById('themeBtn').textContent = darkMode ? '☀️' : '🌙';
+    if (mapTileLayer && leafletMap) {
+      leafletMap.removeLayer(mapTileLayer);
+      mapTileLayer = L.tileLayer(tileUrl(), { maxZoom:19, subdomains:'abcd' }).addTo(leafletMap);
+    }
+    if (pickerTileLayer && locPickerMap) {
+      locPickerMap.removeLayer(pickerTileLayer);
+      pickerTileLayer = L.tileLayer(tileUrl(), { maxZoom:19, subdomains:'abcd' }).addTo(locPickerMap);
+    }
+  }
+  function toggleTheme() {
+    darkMode = !darkMode;
+    localStorage.setItem('ehTheme', darkMode ? 'dark' : 'light');
+    applyTheme();
+  }
 
   function initMap() {
     mapInitialized = true;
@@ -556,11 +667,7 @@
       attributionControl: false,
     });
 
-    // Carto Voyager — clean, modern, no API key needed
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd',
-    }).addTo(leafletMap);
+    mapTileLayer = L.tileLayer(tileUrl(), { maxZoom:19, subdomains:'abcd' }).addTo(leafletMap);
 
     // Attribution (required by OSM/Carto licence, but we position it subtly)
     L.control.attribution({ prefix: false, position: 'bottomleft' })
@@ -805,7 +912,7 @@
   // ══════════════════════════════════════════
   // LOCATION PICKER
   // ══════════════════════════════════════════
-  let locPickerMap = null, locPickerMarker = null;
+  let locPickerMap = null, locPickerMarker = null, pickerTileLayer = null;
   let pickedLat = null, pickedLng = null;
 
   function openLocationPicker() {
@@ -816,9 +923,7 @@
       if (!locPickerMap) {
         locPickerMap = L.map('locPickerMap', { zoomControl: true, attributionControl: false })
           .setView([pickedLat, pickedLng], 17);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          maxZoom: 19, subdomains: 'abcd',
-        }).addTo(locPickerMap);
+        pickerTileLayer = L.tileLayer(tileUrl(), { maxZoom: 19, subdomains: 'abcd' }).addTo(locPickerMap);
         locPickerMarker = L.marker([pickedLat, pickedLng], { draggable: true }).addTo(locPickerMap);
         locPickerMarker.on('dragstart', () => {
           document.getElementById('pickerLabel').textContent = 'Drag to your exact spot...';
@@ -894,6 +999,9 @@
   // REPORT SUBMIT
   // ══════════════════════════════════════════
   document.addEventListener('DOMContentLoaded',()=>{
+    // Sync theme button icon with saved preference
+    document.getElementById('themeBtn').textContent = darkMode ? '☀️' : '🌙';
+
     document.querySelectorAll('.cat-btn').forEach(btn=>{
       btn.addEventListener('click',()=>{
         document.querySelectorAll('.cat-btn').forEach(b=>{b.className='cat-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-gray-100 text-gray-500 border-transparent';});
