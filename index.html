@@ -93,6 +93,7 @@
 
     .no-scrollbar::-webkit-scrollbar { display:none; }
     .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+    .loc-picker-map { height:280px; width:100%; }
 
     /* Nav tab active state */
     .nav-tab.active { color: #0f172a; }
@@ -185,9 +186,12 @@
         <button class="cat-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border-2 bg-gray-100 text-gray-500 border-transparent" data-cat="weather">🌧️ Weather</button>
       </div>
       <textarea id="reportText" placeholder="Describe what's happening near you..." rows="3" class="w-full p-4 rounded-2xl border-2 border-gray-100 text-sm text-gray-900 placeholder-gray-400 resize-none focus:outline-none focus:border-slate-400 transition-colors mb-4"></textarea>
-      <div id="gpsBadge" class="flex items-center gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl mb-5">
-        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        <span id="gpsLabel" class="text-xs text-slate-600 font-semibold">Getting your location...</span>
+      <div id="gpsBadge" onclick="openLocationPicker()" class="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl mb-5 cursor-pointer active:bg-slate-100 transition-colors">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          <span id="gpsLabel" class="text-xs text-slate-600 font-semibold">Getting your location...</span>
+        </div>
+        <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
       </div>
       <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Also post to</p>
       <div class="flex flex-wrap gap-2 mb-6">
@@ -196,6 +200,31 @@
         <button id="togFB" onclick="toggleSocial(this,'facebook')" class="social-tog flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-xs font-bold text-gray-500 transition-all active:scale-95"><svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>Facebook</button>
       </div>
       <button onclick="submitReport()" class="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl text-base shadow-lg shadow-slate-900/20 active:scale-95 transition-transform">Post Report · +10 pts</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       LOCATION PICKER SHEET
+  ══════════════════════════════════════════ -->
+  <div id="locationPickerSheet" class="sheet">
+    <div class="p-5 pb-3">
+      <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4"></div>
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-xl font-bold text-gray-900">Adjust location</h3>
+        <button type="button" aria-label="Back to report" onclick="openSheet('reportSheet')" class="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:bg-gray-200 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+      </div>
+      <p class="text-xs text-slate-500 mb-3">Drag the pin to the exact spot where it's happening</p>
+    </div>
+    <div id="locPickerMap" class="loc-picker-map"></div>
+    <div class="p-5 pb-8">
+      <div class="flex items-center gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl mb-4">
+        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <span id="pickerLabel" class="text-xs text-slate-600 font-semibold">Finding your location...</span>
+      </div>
+      <button onclick="confirmPickedLocation()" class="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl text-base shadow-lg shadow-slate-900/20 active:scale-95 transition-transform mb-2">Use this location</button>
+      <button onclick="openSheet('reportSheet')" class="w-full py-3.5 bg-gray-100 text-gray-600 font-semibold rounded-2xl text-sm">Cancel</button>
     </div>
   </div>
 
@@ -737,7 +766,7 @@
   // ══════════════════════════════════════════
   // SHEETS
   // ══════════════════════════════════════════
-  const ALL_SHEETS = ['shareSheet','contextMenu','reportSheet','rewardsSheet','mapDetailSheet','aboutSheet'];
+  const ALL_SHEETS = ['shareSheet','contextMenu','reportSheet','locationPickerSheet','rewardsSheet','mapDetailSheet','aboutSheet'];
   function openSheet(id){ ALL_SHEETS.forEach(s=>document.getElementById(s).classList.toggle('open',s===id));document.getElementById('overlay').classList.add('visible');}
   function closeAll(){ ALL_SHEETS.forEach(s=>document.getElementById(s).classList.remove('open'));document.getElementById('overlay').classList.remove('visible');}
   function openShareFor(post){ activePost=post;document.getElementById('shareTitle').textContent=post.label+' · '+post.location;document.getElementById('sharePreview').textContent=post.text;if(navigator.share)document.getElementById('nativeShareBtn').classList.remove('hidden');openSheet('shareSheet');}
@@ -756,6 +785,53 @@
       const name=await reverseGeocode(reportLat,reportLng);
       reportLocation=name; label.textContent=name;
     },()=>{ label.textContent='Location permission denied'; },{timeout:8000});
+  }
+
+  // ══════════════════════════════════════════
+  // LOCATION PICKER
+  // ══════════════════════════════════════════
+  let locPickerMap = null, locPickerMarker = null;
+  let pickedLat = null, pickedLng = null;
+
+  function openLocationPicker() {
+    pickedLat = reportLat;
+    pickedLng = reportLng;
+    openSheet('locationPickerSheet');
+    setTimeout(() => {
+      if (!locPickerMap) {
+        locPickerMap = L.map('locPickerMap', { zoomControl: true, attributionControl: false })
+          .setView([pickedLat, pickedLng], 17);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          maxZoom: 19, subdomains: 'abcd',
+        }).addTo(locPickerMap);
+        locPickerMarker = L.marker([pickedLat, pickedLng], { draggable: true }).addTo(locPickerMap);
+        locPickerMarker.on('dragstart', () => {
+          document.getElementById('pickerLabel').textContent = 'Drag to your exact spot...';
+        });
+        locPickerMarker.on('dragend', async () => {
+          const pos = locPickerMarker.getLatLng();
+          pickedLat = pos.lat; pickedLng = pos.lng;
+          document.getElementById('pickerLabel').textContent = 'Finding location...';
+          document.getElementById('pickerLabel').textContent = await reverseGeocode(pickedLat, pickedLng);
+        });
+      } else {
+        locPickerMap.invalidateSize();
+        locPickerMap.setView([pickedLat, pickedLng], 17);
+        locPickerMarker.setLatLng([pickedLat, pickedLng]);
+      }
+      document.getElementById('pickerLabel').textContent = 'Finding location...';
+      reverseGeocode(pickedLat, pickedLng).then(name => {
+        document.getElementById('pickerLabel').textContent = name;
+      });
+    }, 120);
+  }
+
+  function confirmPickedLocation() {
+    reportLat = pickedLat;
+    reportLng = pickedLng;
+    reportLocation = document.getElementById('pickerLabel').textContent;
+    document.getElementById('gpsLabel').textContent = reportLocation;
+    openSheet('reportSheet');
   }
 
   async function reverseGeocode(lat,lon){
